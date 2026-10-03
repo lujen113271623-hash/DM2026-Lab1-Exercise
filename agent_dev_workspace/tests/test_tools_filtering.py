@@ -51,3 +51,99 @@ def test_variance_filter_tool_known_answer_5():
 
     # 3. Check removed features
     assert result["removed_features"] == ["always"]
+
+
+def test_pearson_filter_tool_known_answer_6():
+    session = SessionState()
+
+    # Load dataset using premade load_dataset_tool
+    premade_tools, _ = load_workspace_tools("premade_tools", session)
+    load_dataset_tool = next(
+        t for t in premade_tools if t.name == "load_dataset_tool"
+    )
+    load_dataset_tool.invoke(
+        {
+            "file_path": "agent_dev/sample_fixture.csv",
+            "text_column": "text",
+            "label_column": "label",
+        }
+    )
+
+    # Build DTM using build_dtm_tool
+    dtm_tools = make_dtm_tools(session)
+    build_dtm_tool = next(t for t in dtm_tools if t.name == "build_dtm_tool")
+    build_dtm_tool.invoke({})
+
+    # Execute pearson_filter_tool with target_class="catB"
+    filtering_tools = make_filtering_tools(session)
+    pearson_filter_tool = next(
+        t for t in filtering_tools if t.name == "pearson_filter_tool"
+    )
+    result = pearson_filter_tool.invoke({"target_class": "catB"})
+
+    # Assertions based on Known Answer #6
+    expected_correlations = {
+        "alpha": -0.6882,
+        "always": 0.3780,
+        "beta": -0.7746,
+        "delta": 1.0000,
+        "gamma": 0.8307,
+    }
+    assert result["correlations"] == pytest.approx(
+        expected_correlations, abs=1e-3
+    )
+
+    # Check full_report format and sorting
+    stored = session.results_store[result["result_id"]]
+    full_report = stored["full_report"]
+    assert list(full_report.columns[:2]) == ["term", "pearson_r"]
+    # Verify sorting by pearson_r descending
+    assert full_report["pearson_r"].is_monotonic_decreasing
+
+
+def test_spearman_filter_tool_known_answer_6():
+    session = SessionState()
+
+    # Load dataset using premade load_dataset_tool
+    premade_tools, _ = load_workspace_tools("premade_tools", session)
+    load_dataset_tool = next(
+        t for t in premade_tools if t.name == "load_dataset_tool"
+    )
+    load_dataset_tool.invoke(
+        {
+            "file_path": "agent_dev/sample_fixture.csv",
+            "text_column": "text",
+            "label_column": "label",
+        }
+    )
+
+    # Build DTM using build_dtm_tool
+    dtm_tools = make_dtm_tools(session)
+    build_dtm_tool = next(t for t in dtm_tools if t.name == "build_dtm_tool")
+    build_dtm_tool.invoke({})
+
+    # Execute spearman_filter_tool with target_class="catB"
+    filtering_tools = make_filtering_tools(session)
+    spearman_filter_tool = next(
+        t for t in filtering_tools if t.name == "spearman_filter_tool"
+    )
+    result = spearman_filter_tool.invoke({"target_class": "catB"})
+
+    # Assertions based on Known Answer #6
+    expected_correlations = {
+        "alpha": -0.7500,
+        "always": 0.3780,
+        "beta": -0.7746,
+        "delta": 1.0000,
+        "gamma": 0.9363,
+    }
+    assert result["correlations"] == pytest.approx(
+        expected_correlations, abs=1e-3
+    )
+
+    # Check full_report format and sorting
+    stored = session.results_store[result["result_id"]]
+    full_report = stored["full_report"]
+    assert list(full_report.columns[:2]) == ["term", "spearman_r"]
+    # Verify sorting by spearman_r descending
+    assert full_report["spearman_r"].is_monotonic_decreasing
