@@ -125,3 +125,35 @@ def test_reduce_dimensions_tool_umap():
 
     assert np.allclose(res["coordinates"], expected_coords, atol=1e-3)
     assert session.pending_figure is not None
+
+
+def test_binarize_labels_tool():
+    session = SessionState()
+    premade_tools, _ = load_workspace_tools("premade_tools", session)
+    load_dataset_tool = next(t for t in premade_tools if t.name == "load_dataset_tool")
+
+    load_dataset_tool.invoke({
+        "file_path": "agent_dev/sample_fixture.csv",
+        "text_column": "text",
+        "label_column": "label"
+    })
+
+    tools = make_tools(session)
+    binarize_labels_tool = next(t for t in tools if t.name == "binarize_labels_tool")
+
+    res = binarize_labels_tool.invoke({})
+
+    # 驗證 10 項要求
+    assert res["categories"] == ["catA", "catB"]
+    assert res["n_samples"] == 8
+    assert res["n_categories"] == 2
+    
+    matrix = np.array(res["encoded_matrix"])
+    assert matrix.shape == (8, 2)
+    assert (matrix[0] == [1, 0]).all()
+    assert (matrix[3] == [0, 1]).all()
+
+    assert "binarized_labels" in session.artifacts
+    artifact = session.artifacts["binarized_labels"]
+    assert artifact["categories"] == ["catA", "catB"]
+    assert artifact["matrix"] == res["encoded_matrix"]
