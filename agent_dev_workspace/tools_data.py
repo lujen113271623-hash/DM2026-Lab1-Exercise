@@ -125,6 +125,9 @@ def make_tools(session):
             session.dataframe.drop_duplicates(subset=["text"], keep=False, inplace=True)
             session.dataframe.reset_index(drop=True, inplace=True)
 
+            if "category_name" in session.dataframe.columns:
+                session.set_labels(session.dataframe["category_name"].values)
+
         remaining_rows = len(session.dataframe)
 
         result_id = session.next_result_id("check_duplicates")

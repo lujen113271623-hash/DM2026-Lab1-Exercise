@@ -130,6 +130,7 @@ def test_check_duplicates_tool_known_answer_3():
 
     assert result2["duplicate_count"] == 1
     assert result2["remaining_rows"] == 6
+    assert len(session2.labels) == 6
     assert "always gamma delta" not in session2.dataframe["text"].values
 
 

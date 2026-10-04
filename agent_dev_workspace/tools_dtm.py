@@ -24,7 +24,7 @@ def make_tools(session):
 
         Args:
             max_features: Maximum number of terms to keep ordered by term frequency.
-            min_df: Maximum document frequency for terms to be kept.
+            min_df: Minimum document frequency for terms to be kept.
             max_df: Maximum document frequency for terms to be kept.
             ngram_range: List of two ints [min_n, max_n] defining the n-gram range.
         """
