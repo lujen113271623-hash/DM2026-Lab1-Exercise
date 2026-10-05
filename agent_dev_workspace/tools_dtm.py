@@ -62,7 +62,7 @@ def make_tools(session):
         non_zero = int(feature_matrix.nnz)
         sparsity_pct = 100.0 * (1.0 - non_zero / total_elements) if total_elements > 0 else 0.0
 
-        # 組裝摘要資訊
+        # 組裝摘要資訊 (符合 Small Summary Contract)
         result_id = session.next_result_id("dtm")
         summary = {
             "result_id": result_id,
@@ -71,7 +71,7 @@ def make_tools(session):
             "non_zero": non_zero,
             "total_elements": total_elements,
             "sparsity_pct": sparsity_pct,
-            "feature_names": feature_names,
+            "feature_names_preview": feature_names[:10],
         }
 
         session.store_result("build_dtm_tool", {"max_features": max_features, "min_df": min_df, "max_df": max_df, "ngram_range": ngram_range}, summary)
@@ -85,7 +85,6 @@ def make_tools(session):
 
         # 計算全域各詞彙總出現次數
         counts = np.asarray(session.feature_matrix.sum(axis=0)).ravel()
-        term_frequencies = {term: int(count) for term, count in zip(session.feature_names, counts)}
 
         # 建立 DataFrame 作為 full_report，方便排序與提供繪圖/進一步分析
         report_df = pd.DataFrame({
@@ -93,11 +92,17 @@ def make_tools(session):
             "frequency": counts
         }).sort_values(by="frequency", ascending=False)
 
+        # 組裝 small summary (前 10 名高頻詞)，明確轉換為原生 Python 型別以確保 JSON-serializable
+        top_terms_dict = {
+            str(row["term"]): int(row["frequency"])
+            for _, row in report_df.head(10).iterrows()
+        }
+
         result_id = session.next_result_id("term_freq")
         summary = {
             "result_id": result_id,
-            "total_terms": len(term_frequencies),
-            "frequencies": term_frequencies,
+            "total_terms": len(session.feature_names),
+            "top_terms": top_terms_dict,
         }
 
         session.store_result("term_frequency_tool", {}, summary, full_report=report_df)

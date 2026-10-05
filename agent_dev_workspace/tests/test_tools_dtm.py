@@ -25,12 +25,15 @@ def test_build_dtm_tool_sample_fixture():
 
     # 4. 根據 TEST_FIXTURE.md 已知答案 4 進行斷言驗證
     assert result["shape"] == [8, 5]
-    assert result["feature_names"] == ["alpha", "always", "beta", "delta", "gamma"]
+    assert result["feature_names_preview"] == ["alpha", "always", "beta", "delta", "gamma"]
     assert result["non_zero"] == 21
     assert result["total_elements"] == 40
     assert result["sparsity_pct"] == pytest.approx(47.5, abs=1e-3)
 
-    # 5. 驗證 CountVectorizer artifact 是否存在
+    # 5. 驗證完整 feature_names 仍保留在 session 中
+    assert session.feature_names == ["alpha", "always", "beta", "delta", "gamma"]
+
+    # 6. 驗證 CountVectorizer artifact 是否存在
     assert session.artifacts.get("count_vectorizer") is not None
 
 
@@ -56,17 +59,31 @@ def test_term_frequency_tool_sample_fixture():
     # 2. 執行 term_frequency_tool
     result = term_frequency_tool.invoke({})
 
-    # 3. 根據 TEST_FIXTURE.md Known Answer #14 進行斷言驗證
-    expected_frequencies = {
+    # 3. 驗證 Small Summary (top_terms)
+    expected_top_terms = {
+        "always": 7,
+        "gamma": 7,
+        "alpha": 6,
+        "delta": 4,
+        "beta": 3,
+    }
+
+    assert result["total_terms"] == 5
+    assert result["top_terms"] == expected_top_terms
+
+    # 4. 根據 TEST_FIXTURE.md Known Answer #14 完整驗證 full_report 中的 Dataframe
+    stored_result = session.results_store[result["result_id"]]
+    full_report_df = stored_result["full_report"]
+    report_dict = full_report_df.set_index("term")["frequency"].to_dict()
+
+    expected_full_frequencies = {
         "alpha": 6,
         "always": 7,
         "beta": 3,
         "delta": 4,
         "gamma": 7,
     }
-
-    assert result["total_terms"] == 5
-    assert result["frequencies"] == expected_frequencies
+    assert report_dict == expected_full_frequencies
 
 
 def test_dtm_heatmap_tool_sample_fixture():
