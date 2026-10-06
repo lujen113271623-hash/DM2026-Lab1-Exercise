@@ -40,9 +40,15 @@ def test_reduce_dimensions_tool_pca():
     ]
     expected_variance = [0.7532, 0.1965]
 
-    assert np.allclose(res["coordinates"], expected_coords, atol=1e-3)
+    # Verify summary fields
+    assert res["n_samples"] == 8
+    assert np.allclose(res["coordinates_preview"], expected_coords[:10], atol=1e-3)
     assert np.allclose(res["explained_variance_ratio"], expected_variance, atol=1e-3)
     assert session.pending_figure is not None
+
+    # Verify complete coordinates from session.artifacts
+    coords_artifact = session.artifacts["reduced_coords_pca"]
+    assert np.allclose(coords_artifact, expected_coords, atol=1e-3)
 
 
 def test_reduce_dimensions_tool_tsne():
@@ -82,8 +88,14 @@ def test_reduce_dimensions_tool_tsne():
         [-701.3674, 1465.3973]
     ]
 
-    assert np.allclose(res["coordinates"], expected_coords, atol=1e-3)
+    # Verify summary fields
+    assert res["n_samples"] == 8
+    assert np.allclose(res["coordinates_preview"], expected_coords[:10], atol=1e-3)
     assert session.pending_figure is not None
+
+    # Verify complete coordinates from session.artifacts
+    coords_artifact = session.artifacts["reduced_coords_tsne"]
+    assert np.allclose(coords_artifact, expected_coords, atol=1e-3)
 
 
 def test_reduce_dimensions_tool_umap():
@@ -123,8 +135,14 @@ def test_reduce_dimensions_tool_umap():
         [8.5860, -7.2622]
     ]
 
-    assert np.allclose(res["coordinates"], expected_coords, atol=1e-3)
+    # Verify summary fields
+    assert res["n_samples"] == 8
+    assert np.allclose(res["coordinates_preview"], expected_coords[:10], atol=1e-3)
     assert session.pending_figure is not None
+
+    # Verify complete coordinates from session.artifacts
+    coords_artifact = session.artifacts["reduced_coords_umap"]
+    assert np.allclose(coords_artifact, expected_coords, atol=1e-3)
 
 
 def test_binarize_labels_tool():
@@ -143,17 +161,23 @@ def test_binarize_labels_tool():
 
     res = binarize_labels_tool.invoke({})
 
-    # 驗證 10 項要求
+    # 驗證 Summary preview & 元資料
     assert res["categories"] == ["catA", "catB"]
     assert res["n_samples"] == 8
     assert res["n_categories"] == 2
     
-    matrix = np.array(res["encoded_matrix"])
-    assert matrix.shape == (8, 2)
-    assert (matrix[0] == [1, 0]).all()
-    assert (matrix[3] == [0, 1]).all()
+    matrix_preview = np.array(res["encoded_matrix_preview"])
+    assert matrix_preview.shape == (8, 2)
+    assert (matrix_preview[0] == [1, 0]).all()
+    assert (matrix_preview[3] == [0, 1]).all()
 
+    # 驗證 session.artifacts 完整矩陣
     assert "binarized_labels" in session.artifacts
     artifact = session.artifacts["binarized_labels"]
     assert artifact["categories"] == ["catA", "catB"]
-    assert artifact["matrix"] == res["encoded_matrix"]
+    assert artifact["matrix"] == res["encoded_matrix_preview"]
+    
+    full_matrix = np.array(artifact["matrix"])
+    assert full_matrix.shape == (8, 2)
+    assert (full_matrix[0] == [1, 0]).all()
+    assert (full_matrix[3] == [0, 1]).all()

@@ -33,8 +33,7 @@ def test_variance_filter_tool_known_answer_5():
     )
     result = variance_filter_tool.invoke({"threshold": 0.15})
 
-    # Assertions based strictly on Known Answer #5 and variance_filter_tool spec
-    # 1. Check all 5 term variances using pytest.approx
+    # Expected variances from Known Answer #5
     expected_variances = {
         "alpha": 1.1875,
         "always": 0.109375,
@@ -42,15 +41,33 @@ def test_variance_filter_tool_known_answer_5():
         "delta": 0.25,
         "gamma": 1.109375,
     }
-    assert result["variances"] == pytest.approx(
+
+    # 1. Verify summary fields (Small Summary API)
+    assert result["total_features"] == 5
+    assert result["n_kept"] == 4
+    assert result["n_removed"] == 1
+    # top_variance_terms is dict {term: variance}
+    assert result["top_variance_terms"] == pytest.approx(
         expected_variances, abs=1e-4
     )
 
-    # 2. Check kept features
-    assert set(result["kept_features"]) == {"alpha", "beta", "delta", "gamma"}
+    # 2. Verify complete Known Answer #5 via stored full_report
+    stored = session.results_store[result["result_id"]]
+    full_report = stored["full_report"]
+    assert list(full_report.columns) == ["term", "variance"]
 
-    # 3. Check removed features
-    assert result["removed_features"] == ["always"]
+    report_variances = dict(zip(full_report["term"], full_report["variance"]))
+    assert report_variances == pytest.approx(expected_variances, abs=1e-4)
+
+    # Derive kept and removed features using threshold=0.15 (>= threshold is kept)
+    kept_features = set(
+        full_report[full_report["variance"] >= 0.15]["term"]
+    )
+    removed_features = list(
+        full_report[full_report["variance"] < 0.15]["term"]
+    )
+    assert kept_features == {"alpha", "beta", "delta", "gamma"}
+    assert removed_features == ["always"]
 
 
 def test_pearson_filter_tool_known_answer_6():
@@ -81,7 +98,6 @@ def test_pearson_filter_tool_known_answer_6():
     )
     result = pearson_filter_tool.invoke({"target_class": "catB"})
 
-    # Assertions based on Known Answer #6
     expected_correlations = {
         "alpha": -0.6882,
         "always": 0.3780,
@@ -89,16 +105,30 @@ def test_pearson_filter_tool_known_answer_6():
         "delta": 1.0000,
         "gamma": 0.8307,
     }
-    assert result["correlations"] == pytest.approx(
+
+    # 1. Verify summary fields (Small Summary API)
+    assert result["total_terms"] == 5
+    # Verify values in top_correlations and bottom_correlations
+    assert result["top_correlations"] == pytest.approx(
+        expected_correlations, abs=1e-3
+    )
+    assert result["bottom_correlations"] == pytest.approx(
         expected_correlations, abs=1e-3
     )
 
-    # Check full_report format and sorting
+    # 2. Verify complete Known Answer #6 via stored full_report
     stored = session.results_store[result["result_id"]]
     full_report = stored["full_report"]
     assert list(full_report.columns[:2]) == ["term", "pearson_r"]
     # Verify sorting by pearson_r descending
     assert full_report["pearson_r"].is_monotonic_decreasing
+
+    report_correlations = dict(
+        zip(full_report["term"], full_report["pearson_r"])
+    )
+    assert report_correlations == pytest.approx(
+        expected_correlations, abs=1e-3
+    )
 
 
 def test_spearman_filter_tool_known_answer_6():
@@ -129,7 +159,6 @@ def test_spearman_filter_tool_known_answer_6():
     )
     result = spearman_filter_tool.invoke({"target_class": "catB"})
 
-    # Assertions based on Known Answer #6
     expected_correlations = {
         "alpha": -0.7500,
         "always": 0.3780,
@@ -137,13 +166,27 @@ def test_spearman_filter_tool_known_answer_6():
         "delta": 1.0000,
         "gamma": 0.9363,
     }
-    assert result["correlations"] == pytest.approx(
+
+    # 1. Verify summary fields (Small Summary API)
+    assert result["total_terms"] == 5
+    # Verify values in top_correlations and bottom_correlations
+    assert result["top_correlations"] == pytest.approx(
+        expected_correlations, abs=1e-3
+    )
+    assert result["bottom_correlations"] == pytest.approx(
         expected_correlations, abs=1e-3
     )
 
-    # Check full_report format and sorting
+    # 2. Verify complete Known Answer #6 via stored full_report
     stored = session.results_store[result["result_id"]]
     full_report = stored["full_report"]
     assert list(full_report.columns[:2]) == ["term", "spearman_r"]
     # Verify sorting by spearman_r descending
     assert full_report["spearman_r"].is_monotonic_decreasing
+
+    report_correlations = dict(
+        zip(full_report["term"], full_report["spearman_r"])
+    )
+    assert report_correlations == pytest.approx(
+        expected_correlations, abs=1e-3
+    )

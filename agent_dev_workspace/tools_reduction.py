@@ -90,7 +90,8 @@ def make_tools(session):
             "result_id": result_id,
             "method": method_lower,
             "n_components": n_components,
-            "coordinates": coords_list,
+            "n_samples": len(coords_list),
+            "coordinates_preview": coords_list[:10],
         }
         if explained_variance_ratio is not None:
             summary["explained_variance_ratio"] = explained_variance_ratio
@@ -139,7 +140,7 @@ def make_tools(session):
             "n_samples": n_samples,
             "n_categories": n_categories,
             "categories": categories,
-            "encoded_matrix": encoded_matrix
+            "encoded_matrix_preview": encoded_matrix[:10]
         }
 
         session.store_result("binarize_labels_tool", {}, summary)
